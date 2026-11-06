@@ -45,6 +45,13 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <div><b id="hit">&ndash;</b><span>Hit rate (0.5 = none)</span></div>
     <div><b id="flat">0</b><span>Sat out (flat)</span></div>
   </div>
+  <h2>Claude Haiku agent <span class="sub">separate $100 paper book, same rules</span></h2>
+  <div class="grid">
+    <div><b id="h_eq">&ndash;</b><span>Bankroll</span></div>
+    <div><b id="h_pnl">&ndash;</b><span>P&amp;L</span></div>
+    <div><b id="h_settled">&ndash;</b><span>Settled trades</span></div>
+    <div><b id="h_hit">&ndash;</b><span>Hit rate</span></div>
+  </div>
   <h2>Equity</h2>
   <svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="Paper equity over time"></svg>
   <h2>Recent calls</h2>
@@ -76,7 +83,13 @@ async function load(){
     const res=r.result&&r.result.win!=null?('<span class="'+(r.result.win?'up':'dn')+'">'+(r.result.win?'win ':'loss ')+(r.result.pnl>=0?'+':'')+esc(r.result.pnl)+'</span>'):(r.side==='FLAT'?'&ndash;':'open');
     return '<tr><td>'+esc(bar(r.target_bar))+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.p_up)+'</td><td>'+esc(r.price==null?'':r.price)+'</td><td>'+esc(r.stake==null?'':'$'+r.stake)+'</td><td>'+res+'</td></tr>'}).join('');
 }
-load();setInterval(load,30000);
+async function loadH(){
+  let s;try{s=await (await fetch('status_haiku.json',{cache:'no-store'})).json()}catch(e){return}
+  if(s.error)return;
+  $('h_eq').textContent=money(s.equity);$('h_pnl').textContent=(s.pnl>=0?'+':'')+money(s.pnl);
+  $('h_settled').textContent=s.settled;$('h_hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
+}
+load();loadH();setInterval(load,30000);setInterval(loadH,30000);
 </script>
 </body>
 </html>
