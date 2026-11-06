@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC 15m Paper Bot</title>
+<style>
+:root{--bg:#f4efe6;--ink:#1b1a17;--mute:#6f6a5f;--line:#d9d1c1;--card:#fbf8f1;--up:#1f7a4d;--dn:#b3402a;--acc:#c9822b}
+@media (prefers-color-scheme:dark){:root{--bg:#14130f;--ink:#efe9da;--mute:#9a937f;--line:#2e2b22;--card:#1b1a15;--up:#58c58a;--dn:#e5735a;--acc:#e3a24f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 ui-serif,Georgia,"Times New Roman",serif}
+main{max-width:880px;margin:0 auto;padding:28px 16px 56px}
+h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mute);font:13px/1.4 ui-monospace,Menlo,monospace;text-transform:uppercase;letter-spacing:.08em}
+.hero{display:flex;flex-wrap:wrap;gap:16px 40px;align-items:flex-end;margin:28px 0 8px}
+.big{font:700 clamp(2.6rem,10vw,5rem)/1 ui-serif,Georgia,serif;letter-spacing:-.03em}
+.pnl{font:600 1.2rem ui-monospace,Menlo,monospace}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.note{border-left:3px solid var(--acc);background:var(--card);padding:10px 14px;margin:18px 0;font-size:.95rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:22px 0}
+.grid div{background:var(--card);padding:12px 14px}
+.grid b{display:block;font:600 1.5rem ui-monospace,Menlo,monospace}
+.grid span{font:12px ui-monospace,Menlo,monospace;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+svg{width:100%;height:180px;display:block;border:1px solid var(--line);background:var(--card)}
+table{width:100%;border-collapse:collapse;font:13px ui-monospace,Menlo,monospace;margin-top:10px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--mute);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.wrap{overflow-x:auto}
+h2{font-size:1.1rem;margin:30px 0 4px}
+footer{margin-top:36px;color:var(--mute);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+  <div class="sub">Paper trading &middot; no real money &middot; <span id="upd">loading</span></div>
+  <h1>BTC next-15-minutes</h1>
+  <div class="hero">
+    <div><div class="sub">Paper bankroll</div><div class="big" id="eq">$100.00</div></div>
+    <div class="pnl" id="pnl">&nbsp;</div>
+  </div>
+  <div class="note">The model that makes these calls scored <b>AUC 0.499</b> on held-out data, which is a coin flip. This page measures it. It is not a claim of edge, and nothing here places orders.</div>
+  <div class="grid">
+    <div><b id="calls">0</b><span>Calls</span></div>
+    <div><b id="settled">0</b><span>Settled trades</span></div>
+    <div><b id="hit">&ndash;</b><span>Hit rate (0.5 = none)</span></div>
+    <div><b id="flat">0</b><span>Sat out (flat)</span></div>
+  </div>
+  <h2>Equity</h2>
+  <svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="Paper equity over time"></svg>
+  <h2>Recent calls</h2>
+  <div class="wrap"><table>
+    <thead><tr><th>Bar (UTC)</th><th>Side</th><th>P(up)</th><th>Price</th><th>Stake</th><th>Result</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <footer>Starts at $100, stakes 5% of equity per call at the Kalshi ask (0.50 if unavailable), minus Kalshi's taker fee. Sits out unless the model is at least 3 points from 50/50.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>(n<0?'-':'')+'$'+Math.abs(n).toFixed(2);
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function bar(t){return t?new Date(t*1000).toISOString().slice(5,16).replace('T',' '):''}
+async function load(){
+  let s;try{s=await (await fetch('status.json',{cache:'no-store'})).json()}catch(e){return}
+  if(s.error)return;
+  $('upd').textContent='updated '+s.updated.slice(11,19)+' UTC';
+  $('eq').textContent=money(s.equity);
+  const p=$('pnl');p.textContent=(s.pnl>=0?'+':'')+money(s.pnl)+' since start';p.className='pnl '+(s.pnl>=0?'up':'dn');
+  $('calls').textContent=s.calls;$('settled').textContent=s.settled;$('flat').textContent=s.flat;
+  $('hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
+  const c=s.curve.map(x=>x.equity),lo=Math.min(...c,s.start)-1,hi=Math.max(...c,s.start)+1;
+  const X=i=>c.length<2?0:i/(c.length-1)*600,Y=v=>170-(v-lo)/(hi-lo)*160;
+  const base=Y(s.start);
+  $('chart').innerHTML='<line x1="0" x2="600" y1="'+base+'" y2="'+base+'" stroke="currentColor" stroke-opacity=".25" stroke-dasharray="4 4"/>'+
+    '<polyline fill="none" stroke="'+(s.pnl>=0?'var(--up)':'var(--dn)')+'" stroke-width="2.5" vector-effect="non-scaling-stroke" points="'+c.map((v,i)=>X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ')+'"/>';
+  $('rows').innerHTML=s.recent.map(r=>{
+    const res=r.result&&r.result.win!=null?('<span class="'+(r.result.win?'up':'dn')+'">'+(r.result.win?'win ':'loss ')+(r.result.pnl>=0?'+':'')+esc(r.result.pnl)+'</span>'):(r.side==='FLAT'?'&ndash;':'open');
+    return '<tr><td>'+esc(bar(r.target_bar))+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.p_up)+'</td><td>'+esc(r.price==null?'':r.price)+'</td><td>'+esc(r.stake==null?'':'$'+r.stake)+'</td><td>'+res+'</td></tr>'}).join('');
+}
+load();setInterval(load,30000);
+</script>
+</body>
+</html>
