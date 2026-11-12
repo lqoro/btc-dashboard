@@ -39,18 +39,12 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <div class="pnl" id="pnl">&nbsp;</div>
   </div>
   <div class="note">The model that makes these calls scored <b>AUC 0.499</b> on held-out data, which is a coin flip. This page measures it. It is not a claim of edge, and nothing here places orders.</div>
+  <div class="note">Every call is settled on <b>Kalshi's own market result</b>, with a flat <b>$5</b> stake at the Kalshi ask plus taker fee. The history was re-graded this way on 2026-11-11; the earlier numbers used the Coinbase candle, which disagrees with the contract on about 6% of bars and flattered the results.</div>
   <div class="grid">
     <div><b id="calls">0</b><span>Calls</span></div>
     <div><b id="settled">0</b><span>Settled trades</span></div>
     <div><b id="hit">&ndash;</b><span>Hit rate (0.5 = none)</span></div>
     <div><b id="flat">0</b><span>Sat out (flat)</span></div>
-  </div>
-  <h2>Claude Haiku agent <span class="sub">separate $100 paper book, same rules</span></h2>
-  <div class="grid">
-    <div><b id="h_eq">&ndash;</b><span>Bankroll</span></div>
-    <div><b id="h_pnl">&ndash;</b><span>P&amp;L</span></div>
-    <div><b id="h_settled">&ndash;</b><span>Settled trades</span></div>
-    <div><b id="h_hit">&ndash;</b><span>Hit rate</span></div>
   </div>
   <h2>LSE-trained model <span class="sub">separate $100 paper book, same rules; trained on 4 years of 1-minute BTC data, unproven until 300+ settled trades</span></h2>
   <div class="grid">
@@ -66,7 +60,7 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <thead><tr><th>Bar (UTC)</th><th>Side</th><th>P(up)</th><th>Price</th><th>Stake</th><th>Result</th></tr></thead>
     <tbody id="rows"></tbody>
   </table></div>
-  <footer>Starts at $100, stakes 5% of equity per call at the Kalshi ask (0.50 if unavailable), minus Kalshi's taker fee. Sits out unless the model is at least 3 points from 50/50.</footer>
+  <footer>Two paper books (laya and LSE), each starting at $100. Flat $5 stake per call at the Kalshi ask, minus Kalshi's taker fee; no Kalshi quote means no trade. A call is graded on Kalshi's result once the market finalizes. Sits out unless the model is at least 3 points from 50/50.</footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -90,19 +84,13 @@ async function load(){
     const res=r.result&&r.result.win!=null?('<span class="'+(r.result.win?'up':'dn')+'">'+(r.result.win?'win ':'loss ')+(r.result.pnl>=0?'+':'')+esc(r.result.pnl)+'</span>'):(r.side==='FLAT'?'&ndash;':'open');
     return '<tr><td>'+esc(bar(r.target_bar))+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.p_up)+'</td><td>'+esc(r.price==null?'':r.price)+'</td><td>'+esc(r.stake==null?'':'$'+r.stake)+'</td><td>'+res+'</td></tr>'}).join('');
 }
-async function loadH(){
-  let s;try{s=await (await fetch('status_haiku.json',{cache:'no-store'})).json()}catch(e){return}
-  if(s.error)return;
-  $('h_eq').textContent=money(s.equity);$('h_pnl').textContent=(s.pnl>=0?'+':'')+money(s.pnl);
-  $('h_settled').textContent=s.settled;$('h_hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
-}
 async function loadL(){
   let s;try{s=await (await fetch('status_lse.json',{cache:'no-store'})).json()}catch(e){return}
   if(s.error)return;
   $('l_eq').textContent=money(s.equity);$('l_pnl').textContent=(s.pnl>=0?'+':'')+money(s.pnl);
   $('l_settled').textContent=s.settled;$('l_hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
 }
-load();loadH();loadL();setInterval(load,30000);setInterval(loadH,30000);setInterval(loadL,30000);
+load();loadL();setInterval(load,30000);setInterval(loadL,30000);
 </script>
 </body>
 </html>
