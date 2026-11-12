@@ -36,10 +36,10 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
   <h1>BTC next-15-minutes</h1>
   <div class="hero">
     <div><div class="sub">Paper bankroll</div><div class="big" id="eq">$100.00</div></div>
-    <div class="pnl" id="pnl">&nbsp;</div>
+    <div><div class="pnl" id="pnl">&nbsp;</div><div class="sub" id="alt"></div></div>
   </div>
   <div class="note">The model that makes these calls scored <b>AUC 0.499</b> on held-out data, which is a coin flip. This page measures it. It is not a claim of edge, and nothing here places orders.</div>
-  <div class="note">Every call is settled on <b>Kalshi's own market result</b>, with a flat <b>$5</b> stake at the Kalshi ask plus taker fee. The history was re-graded this way on 2026-11-11; the earlier numbers used the Coinbase candle, which disagrees with the contract on about 6% of bars and flattered the results.</div>
+  <div class="note">Every call is settled on <b>Kalshi's own market result</b>, sized at <b id="rule">2% of bankroll per trade</b>, at the Kalshi ask plus taker fee. The history was re-graded this way on 2026-11-11; the earlier numbers used the Coinbase candle, which disagrees with the contract on about 6% of bars and flattered the results.</div>
   <div class="grid">
     <div><b id="calls">0</b><span>Calls</span></div>
     <div><b id="settled">0</b><span>Settled trades</span></div>
@@ -53,7 +53,7 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <thead><tr><th>Bar (UTC)</th><th>Side</th><th>P(up)</th><th>Price</th><th>Stake</th><th>Result</th></tr></thead>
     <tbody id="rows"></tbody>
   </table></div>
-  <footer>One active paper book (laya), starting at $100. The LSE book was retired on 2026-11-12: its model scored at chance against Kalshi's real results (AUC 0.499 on 2,464 windows), and its earlier paper profit came from the old Coinbase-candle grading. Flat $5 stake per call at the Kalshi ask, minus Kalshi's taker fee; no Kalshi quote means no trade. A call is graded on Kalshi's result once the market finalizes. Sits out unless the model is at least 3 points from 50/50.</footer>
+  <footer>One active paper book (laya), starting at $100. The LSE book was retired on 2026-11-12: its model scored at chance against Kalshi's real results (AUC 0.499 on 2,464 windows), and its earlier paper profit came from the old Coinbase-candle grading. Stake is a percentage of the current paper bankroll per call (minimum $1), at the Kalshi ask, minus Kalshi's taker fee; no Kalshi quote means no trade. A call is graded on Kalshi's result once the market finalizes. Sits out unless the model is at least 3 points from 50/50.</footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -66,6 +66,10 @@ async function load(){
   $('upd').textContent='updated '+s.updated.slice(11,19)+' UTC';
   $('eq').textContent=money(s.equity);
   const p=$('pnl');p.textContent=(s.pnl>=0?'+':'')+money(s.pnl)+' since start';p.className='pnl '+(s.pnl>=0?'up':'dn');
+  const m2=v=>typeof v==='number'?(v>=0?'+':'')+money(v):'n/a';
+  $('alt').textContent=(typeof s.pnl_flat5==='number'||typeof s.pnl_ex_top10==='number')?'P&L at flat $5 stakes '+m2(s.pnl_flat5)+' \u00b7 P&L without the 10 best trades '+m2(s.pnl_ex_top10):'';
+  if(typeof s.stake_pct==='number')$('rule').textContent=+(s.stake_pct*100).toFixed(2)+'% of bankroll per trade';
+  else if(s.stake_mode==='flat'&&typeof s.stake==='number')$('rule').textContent='a flat $'+s.stake.toFixed(2)+' per trade';
   $('calls').textContent=s.calls;$('settled').textContent=s.settled;$('flat').textContent=s.flat;
   $('hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
   const c=s.curve.map(x=>x.equity),lo=Math.min(...c,s.start)-1,hi=Math.max(...c,s.start)+1;
