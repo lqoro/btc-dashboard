@@ -46,13 +46,6 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <div><b id="hit">&ndash;</b><span>Hit rate (0.5 = none)</span></div>
     <div><b id="flat">0</b><span>Sat out (flat)</span></div>
   </div>
-  <h2>LSE-trained model <span class="sub">separate $100 paper book, same rules; trained on 4 years of 1-minute BTC data, unproven until 300+ settled trades</span></h2>
-  <div class="grid">
-    <div><b id="l_eq">&ndash;</b><span>Bankroll</span></div>
-    <div><b id="l_pnl">&ndash;</b><span>P&amp;L</span></div>
-    <div><b id="l_settled">&ndash;</b><span>Settled trades</span></div>
-    <div><b id="l_hit">&ndash;</b><span>Hit rate</span></div>
-  </div>
   <h2>Equity</h2>
   <svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="Paper equity over time"></svg>
   <h2>Recent calls</h2>
@@ -60,7 +53,7 @@ footer{margin-top:36px;color:var(--mute);font-size:.85rem}
     <thead><tr><th>Bar (UTC)</th><th>Side</th><th>P(up)</th><th>Price</th><th>Stake</th><th>Result</th></tr></thead>
     <tbody id="rows"></tbody>
   </table></div>
-  <footer>Two paper books (laya and LSE), each starting at $100. Flat $5 stake per call at the Kalshi ask, minus Kalshi's taker fee; no Kalshi quote means no trade. A call is graded on Kalshi's result once the market finalizes. Sits out unless the model is at least 3 points from 50/50.</footer>
+  <footer>One active paper book (laya), starting at $100. The LSE book was retired on 2026-11-12: its model scored at chance against Kalshi's real results (AUC 0.499 on 2,464 windows), and its earlier paper profit came from the old Coinbase-candle grading. Flat $5 stake per call at the Kalshi ask, minus Kalshi's taker fee; no Kalshi quote means no trade. A call is graded on Kalshi's result once the market finalizes. Sits out unless the model is at least 3 points from 50/50.</footer>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -84,13 +77,7 @@ async function load(){
     const res=r.result&&r.result.win!=null?('<span class="'+(r.result.win?'up':'dn')+'">'+(r.result.win?'win ':'loss ')+(r.result.pnl>=0?'+':'')+esc(r.result.pnl)+'</span>'):(r.side==='FLAT'?'&ndash;':'open');
     return '<tr><td>'+esc(bar(r.target_bar))+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.p_up)+'</td><td>'+esc(r.price==null?'':r.price)+'</td><td>'+esc(r.stake==null?'':'$'+r.stake)+'</td><td>'+res+'</td></tr>'}).join('');
 }
-async function loadL(){
-  let s;try{s=await (await fetch('status_lse.json',{cache:'no-store'})).json()}catch(e){return}
-  if(s.error)return;
-  $('l_eq').textContent=money(s.equity);$('l_pnl').textContent=(s.pnl>=0?'+':'')+money(s.pnl);
-  $('l_settled').textContent=s.settled;$('l_hit').textContent=s.hit_rate==null?'–':(s.hit_rate*100).toFixed(1)+'%';
-}
-load();loadL();setInterval(load,30000);setInterval(loadL,30000);
+load();setInterval(load,30000);
 </script>
 </body>
 </html>
